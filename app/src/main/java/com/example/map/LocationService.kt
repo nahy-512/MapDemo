@@ -45,7 +45,7 @@ class LocationService : Service() {
             applicationContext,
             0,
             resultIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT
+            PendingIntent.FLAG_IMMUTABLE
         )
         val builder = NotificationCompat.Builder(applicationContext, channelId)
         builder.setSmallIcon(R.mipmap.ic_launcher)
