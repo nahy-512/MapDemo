@@ -8,7 +8,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
@@ -24,7 +23,7 @@ class LocationService : Service() {
     private val mLocationCallback: LocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             super.onLocationResult(locationResult)
-            if (locationResult != null && locationResult.lastLocation != null) {
+            if (locationResult.lastLocation != null) {
                 val latitude = locationResult.lastLocation!!.latitude
                 val longitude = locationResult.lastLocation!!.longitude
                 Log.v("LOCATION_UPDATE", "$latitude, $longitude")
@@ -55,16 +54,14 @@ class LocationService : Service() {
         builder.setContentIntent(pendingIntent)
         builder.setAutoCancel(false)
         builder.setPriority(NotificationCompat.PRIORITY_MAX)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (notificationManager != null && notificationManager.getNotificationChannel(channelId) == null) {
-                val notificationChannel = NotificationChannel(
-                    channelId,
-                    "Location Service",
-                    NotificationManager.IMPORTANCE_HIGH
-                )
-                notificationChannel.description = "This channel is used by location service"
-                notificationManager.createNotificationChannel(notificationChannel)
-            }
+        if (notificationManager.getNotificationChannel(channelId) == null) {
+            val notificationChannel = NotificationChannel(
+                channelId,
+                "Location Service",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            notificationChannel.description = "This channel is used by location service"
+            notificationManager.createNotificationChannel(notificationChannel)
         }
         val locationRequest = LocationRequest.create()
         locationRequest.setInterval(4000)
@@ -100,14 +97,12 @@ class LocationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        if (intent != null) {
-            val action = intent.action
-            if (action != null) {
-                if (action == Constants.ACTION_START_LOCATION_SERVICE) {
-                    startLocationService()
-                } else if (action == Constants.ACTION_STOP_LOCATION_SERVICE) {
-                    stopLocationService()
-                }
+        val action = intent.action
+        if (action != null) {
+            if (action == Constants.ACTION_START_LOCATION_SERVICE) {
+                startLocationService()
+            } else if (action == Constants.ACTION_STOP_LOCATION_SERVICE) {
+                stopLocationService()
             }
         }
         return super.onStartCommand(intent, flags, startId)
