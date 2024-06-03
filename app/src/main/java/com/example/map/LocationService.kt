@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Binder
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
@@ -17,9 +18,17 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 
 
-class LocationService : Service() {
+class LocationService(private var locationInterface: LocationUpdateInterface? = null) : Service() {
+
+    private val binder = LocalBinder()
+
+    inner class LocalBinder : Binder() {
+        fun getService(): LocationService = this@LocationService
+    }
+
     private val mLocationCallback: LocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             super.onLocationResult(locationResult)
@@ -27,12 +36,13 @@ class LocationService : Service() {
                 val latitude = locationResult.lastLocation!!.latitude
                 val longitude = locationResult.lastLocation!!.longitude
                 Log.v("LOCATION_UPDATE", "$latitude, $longitude")
+                locationInterface?.sendLocation(latitude, longitude)
             }
         }
     }
 
     override fun onBind(intent: Intent): IBinder? {
-        throw UnsupportedOperationException("Not yet implemented")
+        return binder
     }
 
     @SuppressLint("ForegroundServiceType")
@@ -63,10 +73,10 @@ class LocationService : Service() {
             notificationChannel.description = "This channel is used by location service"
             notificationManager.createNotificationChannel(notificationChannel)
         }
-        val locationRequest = LocationRequest.create()
-        locationRequest.setInterval(4000)
-        locationRequest.setFastestInterval(2000)
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+        val locationRequest = LocationRequest.Builder(INTERVAL_MILLS)
+            .setIntervalMillis(INTERVAL_MILLS)
+            .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+            .build()
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -106,5 +116,14 @@ class LocationService : Service() {
             }
         }
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    fun setLocationUpdateInterface(locationInterface: LocationUpdateInterface) {
+        this.locationInterface = locationInterface
+        Log.d("LocationService", "setLocationUpdateInterface()")
+    }
+
+    companion object {
+        const val INTERVAL_MILLS = 60 * 1000L // 1 minutes
     }
 }
