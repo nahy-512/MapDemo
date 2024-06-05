@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
 
     private val userPolyline = PolylineOverlay()
     private val coords = mutableListOf<LatLng>()
+    private val movementMarkers = mutableListOf<Marker>() // 이동 경로 마커
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -135,12 +136,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
 
     // 사용자의 이동 위치를 추적하는 마커
     private fun setMovementMarker(latLng: LatLng) {
-        val marker = Marker()
-        marker.position = latLng
-        marker.width = 50
-        marker.height = 75
-        marker.captionText = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) // 측정 시각 표시
-        marker.map = naverMap
+        val marker = Marker().apply {
+            position = latLng
+            width = 50
+            height = 75
+            captionText = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) // 측정 시각 표시
+            map = naverMap
+        }
+        // 마커 리스트에 추가
+        movementMarkers.add(marker)
     }
 
     private val connection = object : ServiceConnection {
