@@ -86,14 +86,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
     }
 
     private fun initClickListeners() {
-        binding.buttonStartLocationUpdates.setOnClickListener {
+        // 위치 측정 시작 버튼
+        binding.startLocationRecordBtn.setOnClickListener {
             if (!hasPermission()) {
                 requestLocationPermission()
             } else {
                 startLocationService()
             }
         }
-        binding.buttonStopLocationUpdates.setOnClickListener { stopLocationService() }
+        // 위치 측정 중단 버튼
+        binding.stopLocationRecordBtn.setOnClickListener {
+            stopLocationService()
+        }
     }
 
     private fun initMapView() {
