@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
 
     private val userPolyline = PolylineOverlay()
     private val coords = mutableListOf<LatLng>() // 관측 위치 리스트
+    private var startMarker = Marker() // 경로의 시작 위치 표시
     private val movementMarkers = mutableListOf<Marker>() // 이동 경로 마커 리스트
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -131,6 +132,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
 
     // 유저의 이동 경로 업데이트
     private fun updateCoords(latLng: LatLng) {
+        if (coords.isEmpty()) { // 처음 추가된 경우
+            // 시작 위치 마커 표시
+            setInitialMarker(latLng)
+            // 사용자의 현재 위치를 동선에 저장
+            initPolyLine(latLng, true)
+        }
         coords.add(latLng)
         if (coords.size <= 1) { // 경로가 삭제된 상태
             // polyLine 다시 초기화
@@ -140,13 +147,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
     }
 
     // 시작 위치를 표시할 마커
-    private fun setInitialMarker() {
-        val startMarker = Marker()
+    private fun setInitialMarker(latLng: LatLng) {
         startMarker.iconTintColor = Color.MAGENTA
-        startMarker.position = LatLng(
-            naverMap.cameraPosition.target.latitude,
-            naverMap.cameraPosition.target.longitude
-        )
+        startMarker.position = latLng
         startMarker.captionText = "시작 위치"
         startMarker.map = naverMap
     }
@@ -171,6 +174,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
             userPolyline.map = null
             coords.clear()
             // marker 제거
+            startMarker.map = null
             if (movementMarkers.isNotEmpty()) {
                 movementMarkers.forEach { it.map = null }
                 movementMarkers.clear()
@@ -227,10 +231,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
     private fun setLocationService() {
         val intent = Intent(applicationContext, LocationService::class.java)
         if (!isLocationServiceRunning) { // 실행 X -> 실행하기
+            bindLocationService()
             intent.setAction(Constants.ACTION_START_LOCATION_SERVICE)
             startService(intent)
             Toast.makeText(this, "위치 서비스 시작", Toast.LENGTH_SHORT).show()
-            bindLocationService()
             setLocationButtonUI(true)
         } else { // 실행 -> 실행 중단하기
             intent.setAction(Constants.ACTION_STOP_LOCATION_SERVICE)
@@ -303,10 +307,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
                     )
                 )
                 naverMap.moveCamera(cameraUpdate)
-                // 시작 위치 마커 표시
-                setInitialMarker()
-                // 사용자의 현재 위치를 동선에 저장
-                initPolyLine(LatLng(naverMap.cameraPosition.target.latitude, naverMap.cameraPosition.target.longitude), true)
             }
     }
 
