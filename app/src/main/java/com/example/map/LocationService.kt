@@ -20,6 +20,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 
 class LocationService(private var locationInterface: LocationUpdateInterface? = null) : Service() {
@@ -62,7 +63,7 @@ class LocationService(private var locationInterface: LocationUpdateInterface? = 
             setSmallIcon(R.mipmap.ic_launcher)
             setContentTitle("Location Service")
             setDefaults(NotificationCompat.DEFAULT_ALL)
-            setContentText(LocalDateTime.now().toString()) // 측정 시작 시간
+            setContentText("시작 시간 " + LocalDateTime.now().format(DateTimeFormatter.ofPattern(START_TIME_PATTERN))) // 측정 시작 시간
             setContentIntent(pendingIntent)
             setAutoCancel(false)
             priority = NotificationCompat.PRIORITY_MAX
@@ -128,5 +129,6 @@ class LocationService(private var locationInterface: LocationUpdateInterface? = 
 
     companion object {
         const val INTERVAL_MILLS = 60 * 1000L // 1 minutes
+        const val START_TIME_PATTERN = "yyyy년 MM월 dd일 HH시 mm분 ss초"
     }
 }

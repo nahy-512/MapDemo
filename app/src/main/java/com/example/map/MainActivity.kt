@@ -28,6 +28,8 @@ import com.naver.maps.map.OnMapReadyCallback
 import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.overlay.PolylineOverlay
 import com.naver.maps.map.util.FusedLocationSource
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInterface {
     private lateinit var binding: ActivityMainBinding
@@ -37,13 +39,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
     private var locationService: LocationService? = null
     private var isBound = false
 
-    private val testPolyline = PolylineOverlay()
     private val userPolyline = PolylineOverlay()
-
-    private val coords = mutableListOf<LatLng>(
-        TEST_COORDS[TEST_COORDS.size - 1],
-        TEST_COORDS[TEST_COORDS.size - 1]
-    )
+    private val coords = mutableListOf<LatLng>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,7 +56,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
             initMapView()
         }
         initClickListeners()
-        initPolyLine()
     }
 
     override fun onDestroy() {
@@ -111,19 +107,30 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
         locationSource = FusedLocationSource(this, REQUEST_CODE_LOCATION_PERMISSION)
     }
 
-    private fun initPolyLine() {
-        // 테스트
-        testPolyline.coords = TEST_COORDS
-        testPolyline.color = Color.MAGENTA
-        testPolyline.width = 8
-        // 유저
+    // 유저의 이동 경로 초기화
+    private fun initPolyLine(startLatLng: LatLng) {
+        coords.addAll(listOf(startLatLng, startLatLng))
         userPolyline.coords = coords
         userPolyline.color = Color.DKGRAY
+        userPolyline.map = naverMap
     }
 
+    // 유저의 이동 경로 업데이트
     private fun updateCoords(latLng: LatLng) {
         coords.add(latLng)
         userPolyline.coords = coords
+    }
+
+    // 시작 위치를 표시할 마커
+    private fun setInitialMarker() {
+        val startMarker = Marker()
+        startMarker.iconTintColor = Color.MAGENTA
+        startMarker.position = LatLng(
+            naverMap.cameraPosition.target.latitude,
+            naverMap.cameraPosition.target.longitude
+        )
+        startMarker.captionText = "시작 위치"
+        startMarker.map = naverMap
     }
 
     // 사용자의 이동 위치를 추적하는 마커
@@ -132,6 +139,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
         marker.position = latLng
         marker.width = 50
         marker.height = 75
+        marker.captionText = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) // 측정 시각 표시
         marker.map = naverMap
     }
 
@@ -215,18 +223,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
         naverMap.uiSettings.isLocationButtonEnabled = true
         // 위치를 추적하면서 카메라도 따라 움직인다.
         naverMap.locationTrackingMode = LocationTrackingMode.Follow
-        // 시작 위치를 표시할 마커
-        val startMarker = Marker()
-        startMarker.iconTintColor = Color.MAGENTA
-        startMarker.position = LatLng(
-            naverMap.cameraPosition.target.latitude,
-            naverMap.cameraPosition.target.longitude
-        )
-        startMarker.captionText = "시작 위치"
-        startMarker.map = naverMap
-        // 선 연결
-        testPolyline.map = naverMap
-        userPolyline.map = naverMap
 
         // 사용자 현재 위치 받아오기
         var currentLocation: Location?
@@ -258,23 +254,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
                     )
                 )
                 naverMap.moveCamera(cameraUpdate)
-
-                // 시작 위치 마커 현재위치로 변경
-                startMarker.position = LatLng(
-                    naverMap.cameraPosition.target.latitude,
-                    naverMap.cameraPosition.target.longitude
-                )
-                // 선 업데이트
-                updateCoords(
-                    LatLng(naverMap.cameraPosition.target.latitude, naverMap.cameraPosition.target.longitude)
-                )
+                // 시작 위치 마커 표시
+                setInitialMarker()
+                // 사용자의 현재 위치를 동선에 저장
+                initPolyLine(LatLng(naverMap.cameraPosition.target.latitude, naverMap.cameraPosition.target.longitude))
             }
     }
 
     override fun sendLocation(latitude: Double, longitude: Double) {
         Log.d("MAIN_LOCATION", "$latitude, $longitude")
-        updateCoords(LatLng(latitude, longitude))
-        setMovementMarker(LatLng(latitude, longitude))
+        updateCoords(LatLng(latitude, longitude)) // 이동 경로 업데이트
+        setMovementMarker(LatLng(latitude, longitude)) // 이동 경로 마커 추가
     }
 
     companion object {
