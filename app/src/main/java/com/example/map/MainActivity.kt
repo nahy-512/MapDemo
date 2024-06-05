@@ -118,16 +118,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
     }
 
     // 유저의 이동 경로 초기화
-    private fun initPolyLine(startLatLng: LatLng) {
-        coords.addAll(listOf(startLatLng, startLatLng))
+    private fun initPolyLine(startLatLng: LatLng, isFirst: Boolean) {
+        if (isFirst) {
+            coords.addAll(listOf(startLatLng, startLatLng))
+            userPolyline.color = Color.DKGRAY
+        } else {
+            coords.add(startLatLng)
+        }
         userPolyline.coords = coords
-        userPolyline.color = Color.DKGRAY
         userPolyline.map = naverMap
     }
 
     // 유저의 이동 경로 업데이트
     private fun updateCoords(latLng: LatLng) {
         coords.add(latLng)
+        if (coords.size <= 1) { // 경로가 삭제된 상태
+            // polyLine 다시 초기화
+            initPolyLine(latLng, false)
+        }
         userPolyline.coords = coords
     }
 
@@ -161,6 +169,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
         if (!isLocationServiceRunning) { // 측정이 끝난 상태
             // polyLine 제거
             userPolyline.map = null
+            coords.clear()
             // marker 제거
             if (movementMarkers.isNotEmpty()) {
                 movementMarkers.forEach { it.map = null }
@@ -297,7 +306,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
                 // 시작 위치 마커 표시
                 setInitialMarker()
                 // 사용자의 현재 위치를 동선에 저장
-                initPolyLine(LatLng(naverMap.cameraPosition.target.latitude, naverMap.cameraPosition.target.longitude))
+                initPolyLine(LatLng(naverMap.cameraPosition.target.latitude, naverMap.cameraPosition.target.longitude), true)
             }
     }
 
