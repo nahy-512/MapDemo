@@ -22,11 +22,19 @@
         app:layout_constraintBottom_toBottomOf="parent" >
 
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/start_location_record_btn"
+            android:id="@+id/location_record_btn"
             android:layout_marginEnd="5dp"
             android:drawableStart="@drawable/ic_start"
             android:text="@string/start_location_update"
             style="@style/location_btn" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/reset_route_btn"
+            android:layout_marginStart="5dp"
+            android:drawableStart="@drawable/ic_trash"
+            android:backgroundTint="#FF6B6B"
+            android:text="@string/reset_route"
+            style="@style/location_btn"/>
 
     </LinearLayout>
 

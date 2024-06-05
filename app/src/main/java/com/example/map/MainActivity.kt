@@ -40,8 +40,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
     private var isBound = false
 
     private val userPolyline = PolylineOverlay()
-    private val coords = mutableListOf<LatLng>()
-    private val movementMarkers = mutableListOf<Marker>() // 이동 경로 마커
+    private val coords = mutableListOf<LatLng>() // 관측 위치 리스트
+    private val movementMarkers = mutableListOf<Marker>() // 이동 경로 마커 리스트
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,12 +92,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
 
     private fun initClickListeners() {
         // 위치 측정 버튼
-        binding.startLocationRecordBtn.setOnClickListener {
+        binding.locationRecordBtn.setOnClickListener {
             if (!hasPermission()) {
                 requestLocationPermission()
             } else {
                 setLocationService()
             }
+        }
+        // 경로 초기화 버튼
+        binding.resetRouteBtn.setOnClickListener {
+            resetRoute()
         }
     }
 
@@ -150,6 +154,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
         }
         // 마커 리스트에 추가
         movementMarkers.add(marker)
+    }
+
+    // 이동 경로 초기화
+    private fun resetRoute() {
+        if (!isLocationServiceRunning) { // 측정이 끝난 상태
+            // polyLine 제거
+            userPolyline.map = null
+            // marker 제거
+            if (movementMarkers.isNotEmpty()) {
+                movementMarkers.forEach { it.map = null }
+                movementMarkers.clear()
+            }
+            Toast.makeText(this, "지금까지 기록된 경로를 삭제했습니다.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "위치 측정이 아직 종료되지 않았습니다.\n종료 후 경로를 삭제해 주세요.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private val connection = object : ServiceConnection {
@@ -212,7 +232,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
     }
 
     private fun setLocationButtonUI(isRunning: Boolean) {
-        with(binding.startLocationRecordBtn) {
+        with(binding.locationRecordBtn) {
             text = if (isRunning) { // 위치 측정 중이라면 -> 중단 버튼 표시
                 setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_stop, 0, 0, 0)
                 getText(R.string.stop_location_updates)
