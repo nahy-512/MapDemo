@@ -50,7 +50,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
 
         setContentView(binding.root)
 
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        initViews()
         if (!hasPermission()) {
             requestLocationPermission()
         } else {
@@ -85,18 +85,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
         )
     }
 
+    private fun initViews() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        setLocationButtonUI(false)
+    }
+
     private fun initClickListeners() {
-        // 위치 측정 시작 버튼
+        // 위치 측정 버튼
         binding.startLocationRecordBtn.setOnClickListener {
             if (!hasPermission()) {
                 requestLocationPermission()
             } else {
-                startLocationService()
+                setLocationService()
             }
-        }
-        // 위치 측정 중단 버튼
-        binding.stopLocationRecordBtn.setOnClickListener {
-            stopLocationService()
         }
     }
 
@@ -172,13 +173,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_LOCATION_PERMISSION && grantResults.isNotEmpty()) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startLocationService()
+                setLocationService()
             } else {
                 Toast.makeText(this, "Permission denied!", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
+    // LocationService가 실행중인지를 판별
     private val isLocationServiceRunning: Boolean
         get() {
             val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
@@ -192,22 +194,32 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
             return false
         }
 
-    private fun startLocationService() {
-        if (!isLocationServiceRunning) {
-            val intent = Intent(applicationContext, LocationService::class.java)
+    // 위치 측정 시작 또는 종료
+    private fun setLocationService() {
+        val intent = Intent(applicationContext, LocationService::class.java)
+        if (!isLocationServiceRunning) { // 실행 X -> 실행하기
             intent.setAction(Constants.ACTION_START_LOCATION_SERVICE)
             startService(intent)
-            Toast.makeText(this, "Location service started", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "위치 서비스 시작", Toast.LENGTH_SHORT).show()
             bindLocationService()
+            setLocationButtonUI(true)
+        } else { // 실행 -> 실행 중단하기
+            intent.setAction(Constants.ACTION_STOP_LOCATION_SERVICE)
+            startService(intent)
+            Toast.makeText(this, "위치 서비스 중단", Toast.LENGTH_SHORT).show()
+            setLocationButtonUI(false)
         }
     }
 
-    private fun stopLocationService() {
-        if (isLocationServiceRunning) {
-            val intent = Intent(applicationContext, LocationService::class.java)
-            intent.setAction(Constants.ACTION_STOP_LOCATION_SERVICE)
-            startService(intent)
-            Toast.makeText(this, "Location service stopped", Toast.LENGTH_SHORT).show()
+    private fun setLocationButtonUI(isRunning: Boolean) {
+        with(binding.startLocationRecordBtn) {
+            text = if (isRunning) { // 위치 측정 중이라면 -> 중단 버튼 표시
+                setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_stop, 0, 0, 0)
+                getText(R.string.stop_location_updates)
+            } else { // 위치 측정 중이 아니라면 -> 시작 버튼 표시
+                setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_start, 0, 0, 0)
+                getText(R.string.start_location_update)
+            }
         }
     }
 
