@@ -19,6 +19,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import java.time.LocalDateTime
 
 
 class LocationService(private var locationInterface: LocationUpdateInterface? = null) : Service() {
@@ -57,13 +58,15 @@ class LocationService(private var locationInterface: LocationUpdateInterface? = 
             PendingIntent.FLAG_IMMUTABLE
         )
         val builder = NotificationCompat.Builder(applicationContext, channelId)
-        builder.setSmallIcon(R.mipmap.ic_launcher)
-        builder.setContentTitle("Location Service")
-        builder.setDefaults(NotificationCompat.DEFAULT_ALL)
-        builder.setContentText("Running")
-        builder.setContentIntent(pendingIntent)
-        builder.setAutoCancel(false)
-        builder.setPriority(NotificationCompat.PRIORITY_MAX)
+        builder.apply {
+            setSmallIcon(R.mipmap.ic_launcher)
+            setContentTitle("Location Service")
+            setDefaults(NotificationCompat.DEFAULT_ALL)
+            setContentText(LocalDateTime.now().toString()) // 측정 시작 시간
+            setContentIntent(pendingIntent)
+            setAutoCancel(false)
+            priority = NotificationCompat.PRIORITY_MAX
+        }
         if (notificationManager.getNotificationChannel(channelId) == null) {
             val notificationChannel = NotificationChannel(
                 channelId,

@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.location.Location
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
@@ -16,17 +17,22 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.map.databinding.ActivityMainBinding
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.naver.maps.geometry.LatLng
+import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.LocationTrackingMode
 import com.naver.maps.map.MapFragment
 import com.naver.maps.map.NaverMap
 import com.naver.maps.map.OnMapReadyCallback
+import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.overlay.PolylineOverlay
 import com.naver.maps.map.util.FusedLocationSource
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInterface {
     private lateinit var binding: ActivityMainBinding
     private lateinit var naverMap: NaverMap
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationSource: FusedLocationSource
     private var locationService: LocationService? = null
     private var isBound = false
@@ -46,6 +52,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
 
         setContentView(binding.root)
 
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         if (!hasPermission()) {
             requestLocationPermission()
         } else {
@@ -114,9 +121,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
         userPolyline.color = Color.DKGRAY
     }
 
-    private fun updateCoords(latitude: Double, longitude: Double) {
-        coords.add(LatLng(latitude, longitude))
+    private fun updateCoords(latLng: LatLng) {
+        coords.add(latLng)
         userPolyline.coords = coords
+    }
+
+    // 사용자의 이동 위치를 추적하는 마커
+    private fun setMovementMarker(latLng: LatLng) {
+        val marker = Marker()
+        marker.position = latLng
+        marker.width = 50
+        marker.height = 75
+        marker.map = naverMap
     }
 
     private val connection = object : ServiceConnection {
@@ -193,20 +209,72 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationUpdateInte
 
     override fun onMapReady(naverMap: NaverMap) {
         this.naverMap = naverMap
-        // 현재 위치
+        // 내장 위치 추적 기능
         naverMap.locationSource = locationSource
         // 현재 위치 버튼 기능
         naverMap.uiSettings.isLocationButtonEnabled = true
         // 위치를 추적하면서 카메라도 따라 움직인다.
         naverMap.locationTrackingMode = LocationTrackingMode.Follow
+        // 시작 위치를 표시할 마커
+        val startMarker = Marker()
+        startMarker.iconTintColor = Color.MAGENTA
+        startMarker.position = LatLng(
+            naverMap.cameraPosition.target.latitude,
+            naverMap.cameraPosition.target.longitude
+        )
+        startMarker.captionText = "시작 위치"
+        startMarker.map = naverMap
         // 선 연결
         testPolyline.map = naverMap
         userPolyline.map = naverMap
+
+        // 사용자 현재 위치 받아오기
+        var currentLocation: Location?
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location: Location? ->
+                currentLocation = location
+                // 위치 오버레이의 가시성은 기본적으로 false로 지정되어 있습니다. 가시성을 true로 변경하면 지도에 위치 오버레이가 나타납니다.
+                // 파랑색 점으로 현재 위치 표시
+                naverMap.locationOverlay.run {
+                    isVisible = true
+                    position = LatLng(currentLocation!!.latitude, currentLocation!!.longitude)
+                }
+
+                // 카메라 현재위치로 이동
+                val cameraUpdate = CameraUpdate.scrollTo(
+                    LatLng(
+                        currentLocation!!.latitude,
+                        currentLocation!!.longitude
+                    )
+                )
+                naverMap.moveCamera(cameraUpdate)
+
+                // 시작 위치 마커 현재위치로 변경
+                startMarker.position = LatLng(
+                    naverMap.cameraPosition.target.latitude,
+                    naverMap.cameraPosition.target.longitude
+                )
+                // 선 업데이트
+                updateCoords(
+                    LatLng(naverMap.cameraPosition.target.latitude, naverMap.cameraPosition.target.longitude)
+                )
+            }
     }
 
     override fun sendLocation(latitude: Double, longitude: Double) {
         Log.d("MAIN_LOCATION", "$latitude, $longitude")
-        updateCoords(latitude, longitude)
+        updateCoords(LatLng(latitude, longitude))
+        setMovementMarker(LatLng(latitude, longitude))
     }
 
     companion object {
